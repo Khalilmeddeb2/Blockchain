@@ -1,3 +1,5 @@
+var admins;
+
 App = {
   web3Provider: null,
   contracts: {},
@@ -17,6 +19,17 @@ App = {
       App.web3Provider = new Web3.providers.HttpProvider('http://localhost:7545');
       web3 = new Web3(App.web3Provider);
     }
+    web3.eth.getAccounts((err, accounts) => {
+      admins = accounts.slice(0, 2);
+      App.web3Provider = metaProvider;
+      web3 = new Web3(web3.currentProvider);
+    });
+
+    ethereum.on("accountsChanged", (a) => {
+      App.account = a[0];
+      App.updateAccountSection();
+      App.render();
+    });
     return App.initContract();
   },
 
@@ -44,6 +57,15 @@ App = {
     if (err === null) {
       App.account = account;
       $("#accountAddress").html("Your Account: " + account);
+      var addSection = $("#add-section");
+      addSection.empty();
+      if (admins.includes(App.account)) {
+        addSection.append(
+          '<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal">' +
+            "Add Candidate" +
+            "</button>"
+        );
+      }
     }
   });
 
@@ -110,7 +132,22 @@ castVote: function() {
       App.render();
     });
   });
-}
+},
+addCandidate: function () {
+  var name = $("#name").val();
+  App.contracts.Election.deployed()
+    .then((instance) => {
+      return instance.addCandidate(name, { from: App.account });
+    })
+    .then(() => {
+      App.render();
+      $("#modal").modal("hide");
+      $("#name").val("");
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+},
 
 
 };
